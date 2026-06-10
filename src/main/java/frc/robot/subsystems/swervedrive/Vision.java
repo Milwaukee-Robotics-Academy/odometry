@@ -77,6 +77,7 @@ public class Vision {
     this.currentPose = currentPose;
     this.field2d = field;
 
+    SmartDashboard.putBoolean("Odometry/Vision-Enable", false);
     if (Robot.isSimulation()) {
       visionSim = new VisionSystemSim("Vision");
       visionSim.addAprilTags(fieldLayout);
