@@ -26,14 +26,15 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
+import frc.robot.subsystems.QuestNavSubsystem;
 import frc.robot.subsystems.swervedrive.Vision.Cameras;
 import java.io.File;
 import java.io.IOException;
@@ -63,12 +64,14 @@ public class SwerveSubsystem extends SubsystemBase {
   /**
    * Enable vision odometry updates while driving.
    */
-  private final boolean visionDriveTest = true;
-
+  private final boolean     visionDriveTest = true;
+ 
   /**
    * PhotonVision class to keep an accurate odometry.
    */
   private Vision vision;
+
+  private QuestNavSubsystem questNavSubsystem;
 
   /**
    * Initialize {@link SwerveDrive} with the directory provided.
@@ -77,11 +80,12 @@ public class SwerveSubsystem extends SubsystemBase {
    */
   public SwerveSubsystem(File directory) {
     boolean blueAlliance = DriverStation.getAlliance().isPresent()
-        && DriverStation.getAlliance().get() == Alliance.Blue;
+        ? DriverStation.getAlliance().get() == DriverStation.Alliance.Blue
+        : false;
     Pose2d startingPose = blueAlliance ? new Pose2d(new Translation2d(Meter.of(3.7),
         Meter.of(4)),
         Rotation2d.fromDegrees(180))
-        : new Pose2d(new Translation2d(Meter.of(17.3),
+        : new Pose2d(new Translation2d(Meter.of(12.7),
             Meter.of(4)),
             Rotation2d.fromDegrees(0));
     // Configure the Telemetry before creating the SwerveDrive to avoid unnecessary
@@ -112,14 +116,17 @@ public class SwerveSubsystem extends SubsystemBase {
     // possible
     if (visionDriveTest) {
       setupPhotonVision();
-      // Stop the odometry thread if we are using vision that way we can synchronize
-      // updates better.
-      swerveDrive.stopOdometryThread();
-    }
-    setupPathPlanner();
-  }
+      setupQuestNav();
+            // Stop the odometry thread if we are using vision that way we can synchronize
+            // updates better.
+            swerveDrive.stopOdometryThread();
+          }
+          setupPathPlanner();
+        }
+      
 
-  /**
+      
+      /**
    * Construct the swerve drive.
    *
    * @param driveCfg      SwerveDriveConfiguration for the swerve.
@@ -131,6 +138,7 @@ public class SwerveSubsystem extends SubsystemBase {
         Constants.MAX_SPEED,
         new Pose2d(new Translation2d(Meter.of(2), Meter.of(0)),
             Rotation2d.fromDegrees(0)));
+    resetQuestNavPose();
   }
 
   /**
@@ -140,6 +148,13 @@ public class SwerveSubsystem extends SubsystemBase {
     vision = new Vision(swerveDrive::getPose, swerveDrive.field);
   }
 
+  private void setupQuestNav() {
+    questNavSubsystem = new QuestNavSubsystem(swerveDrive);
+  }
+
+  public void resetQuestNavPose() {
+    questNavSubsystem.resetPose(swerveDrive.getPose());
+  }
   @Override
   public void periodic() {
     // When vision is enabled we must manually update odometry in SwerveDrive
@@ -147,7 +162,15 @@ public class SwerveSubsystem extends SubsystemBase {
       swerveDrive.updateOdometry();
       vision.updatePoseEstimation(swerveDrive);
     }
+    updateDashboard();
+    questNavSubsystem.periodic();
   }
+  
+  private void updateDashboard() {
+    SmartDashboard.putNumber("Odometry/Swerve/Heading", getPose().getRotation().getDegrees());
+    SmartDashboard.putNumber("Odometry/Swerve/X", getPose().getX());
+    SmartDashboard.putNumber("Odometry/Swerve/Y", getPose().getY());
+  } 
 
   @Override
   public void simulationPeriodic() {
@@ -217,7 +240,6 @@ public class SwerveSubsystem extends SubsystemBase {
 
     // Preload PathPlanner Path finding
     // IF USING CUSTOM PATHFINDER ADD BEFORE THIS LINE
-    // schedule via CommandScheduler to avoid deprecated Command.schedule()
     CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
   }
 
@@ -241,6 +263,23 @@ public class SwerveSubsystem extends SubsystemBase {
       }
     });
   }
+
+  /**
+   * Get the robot relative speeds to aim at a target.
+   *
+   * @param translationX     Translation in the X direction. Cubed for smoother
+   *                         controls.
+   * @param translationY     Translation in the Y direction. Cubed for smoother
+   *                         controls.
+   * @param angularRotationX Angular velocity of the robot to set. Cubed for
+   *                         smoother controls.
+   * @return Robot relative chassis speeds to aim at a target.
+   */
+public Rotation2d getAngleToTarget(Translation2d target) {
+  Translation2d robotPos = swerveDrive.getPose().getTranslation();
+  // Returns the angle from the robot to the target coordinate
+  return target.minus(robotPos).getAngle();
+}
 
   /**
    * Get the path follower with events.
