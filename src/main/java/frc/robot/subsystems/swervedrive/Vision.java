@@ -52,7 +52,7 @@ public class Vision {
    * April Tag Field Layout of the year.
    */
   public static final AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(
-      AprilTagFields.k2025ReefscapeAndyMark);
+      AprilTagFields.k2026RebuiltAndymark);
   /**
    * Photon Vision Simulation
    */
@@ -133,9 +133,11 @@ public class Vision {
       Optional<EstimatedRobotPose> poseEst = getEstimatedGlobalPose(camera);
       if (poseEst.isPresent()) {
         var pose = poseEst.get();
-        swerveDrive.addVisionMeasurement(pose.estimatedPose.toPose2d(),
+        if (SmartDashboard.getBoolean("Odometry/Vision-Enable", false)) {
+          swerveDrive.addVisionMeasurement(pose.estimatedPose.toPose2d(),
             pose.timestampSeconds,
             camera.curStdDevs);
+        }
         Field2d odField = (Field2d)SmartDashboard.getData("Field");
         FieldObject2d odFieldVision = odField.getObject("Vision-"+camera.name());
         odFieldVision.setPose(pose.estimatedPose.toPose2d());
