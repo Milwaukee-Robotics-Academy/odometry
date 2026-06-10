@@ -21,6 +21,8 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.FieldObject2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Robot;
 import java.awt.Desktop;
 import java.util.ArrayList;
@@ -134,6 +136,10 @@ public class Vision {
         swerveDrive.addVisionMeasurement(pose.estimatedPose.toPose2d(),
             pose.timestampSeconds,
             camera.curStdDevs);
+        Field2d odField = (Field2d)SmartDashboard.getData("Field");
+        FieldObject2d odFieldVision = odField.getObject("Vision-"+camera.name());
+        odFieldVision.setPose(pose.estimatedPose.toPose2d());
+        SmartDashboard.putData("Odometry/Field", odField);
       }
     }
   }
