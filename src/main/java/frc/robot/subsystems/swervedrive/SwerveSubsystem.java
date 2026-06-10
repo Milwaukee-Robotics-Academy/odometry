@@ -30,6 +30,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.robot.Constants;
@@ -217,9 +218,10 @@ public class SwerveSubsystem extends SubsystemBase
       e.printStackTrace();
     }
 
-    //Preload PathPlanner Path finding
-    // IF USING CUSTOM PATHFINDER ADD BEFORE THIS LINE
-    PathfindingCommand.warmupCommand().schedule();
+  //Preload PathPlanner Path finding
+  // IF USING CUSTOM PATHFINDER ADD BEFORE THIS LINE
+  // schedule via CommandScheduler to avoid deprecated Command.schedule()
+  CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
   }
 
   /**

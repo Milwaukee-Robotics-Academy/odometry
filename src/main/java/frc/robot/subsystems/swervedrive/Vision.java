@@ -1,7 +1,6 @@
 package frc.robot.subsystems.swervedrive;
 
-import static edu.wpi.first.units.Units.Microseconds;
-import static edu.wpi.first.units.Units.Seconds;
+// Microseconds and Seconds utilities removed (unused after cleanup)
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -17,7 +16,7 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.NetworkTablesJNI;
+// NetworkTablesJNI import removed (unused after cleanup)
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.Timer;
@@ -31,7 +30,6 @@ import java.util.function.Supplier;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
-import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.PhotonUtils;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
@@ -55,17 +53,9 @@ public class Vision
   public static final AprilTagFieldLayout fieldLayout                     = AprilTagFieldLayout.loadField(
       AprilTagFields.k2025ReefscapeAndyMark);
   /**
-   * Ambiguity defined as a value between (0,1). Used in {@link Vision#filterPose}.
-   */
-  private final       double              maximumAmbiguity                = 0.25;
-  /**
    * Photon Vision Simulation
    */
   public              VisionSystemSim     visionSim;
-  /**
-   * Count of times that the odom thinks we're more than 10meters away from the april tag.
-   */
-  private             double              longDistangePoseEstimationCount = 0;
   /**
    * Current pose from the pose estimator using wheel odometry.
    */
@@ -163,7 +153,7 @@ public class Vision
    */
   public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Cameras camera)
   {
-    Optional<EstimatedRobotPose> poseEst = camera.getEstimatedGlobalPose();
+  Optional<EstimatedRobotPose> poseEst = camera.getEstimatedGlobalPose();
     if (Robot.isSimulation())
     {
       Field2d debugField = visionSim.getDebugField();
@@ -188,44 +178,7 @@ public class Vision
    * @param pose Estimated robot pose.
    * @return Could be empty if there isn't a good reading.
    */
-  @Deprecated(since = "2024", forRemoval = true)
-  private Optional<EstimatedRobotPose> filterPose(Optional<EstimatedRobotPose> pose)
-  {
-    if (pose.isPresent())
-    {
-      double bestTargetAmbiguity = 1; // 1 is max ambiguity
-      for (PhotonTrackedTarget target : pose.get().targetsUsed)
-      {
-        double ambiguity = target.getPoseAmbiguity();
-        if (ambiguity != -1 && ambiguity < bestTargetAmbiguity)
-        {
-          bestTargetAmbiguity = ambiguity;
-        }
-      }
-      //ambiguity to high dont use estimate
-      if (bestTargetAmbiguity > maximumAmbiguity)
-      {
-        return Optional.empty();
-      }
-
-      //est pose is very far from recorded robot pose
-      if (PhotonUtils.getDistanceToPose(currentPose.get(), pose.get().estimatedPose.toPose2d()) > 1)
-      {
-        longDistangePoseEstimationCount++;
-
-        //if it calculates that were 10 meter away for more than 10 times in a row its probably right
-        if (longDistangePoseEstimationCount < 10)
-        {
-          return Optional.empty();
-        }
-      } else
-      {
-        longDistangePoseEstimationCount = 0;
-      }
-      return pose;
-    }
-    return Optional.empty();
-  }
+  // filterPose removed - unused in this project (preserve logic in git history if needed)
 
 
   /**
@@ -373,6 +326,21 @@ public class Vision
      * Pose estimator for camera.
      */
     public final  PhotonPoseEstimator          poseEstimator;
+
+    /**
+     * Small factory to create the PhotonPoseEstimator. Kept separate so the deprecated usages
+     * are localized and can be suppressed cleanly.
+     */
+    private static PhotonPoseEstimator createPoseEstimator(Transform3d robotToCamTransform)
+    {
+      // New PhotonPoseEstimator constructor takes the tag layout and the robot->camera
+      // transform. The older constructor accepted a PoseStrategy; that API was removed.
+      // To reproduce previous behavior we will prefer the coprocessor multi-tag
+      // estimator at runtime and fall back to the lowest-ambiguity estimator when needed
+      // (see updateEstimatedGlobalPose).
+      PhotonPoseEstimator estimator = new PhotonPoseEstimator(Vision.fieldLayout, robotToCamTransform);
+      return estimator;
+    }
     /**
      * Standard Deviation for single tag readings for pose estimation.
      */
@@ -402,10 +370,9 @@ public class Vision
      * Results list to be updated periodically and cached to avoid unnecessary queries.
      */
     public        List<PhotonPipelineResult>   resultsList       = new ArrayList<>();
-    /**
-     * Last read from the camera timestamp to prevent lag due to slow data fetches.
-     */
-    private       double                       lastReadTimestamp = Microseconds.of(NetworkTablesJNI.now()).in(Seconds);
+  /**
+   * Last read from the camera timestamp to prevent lag due to slow data fetches. (removed unused field)
+   */
 
     /**
      * Construct a Photon Camera class with help. Standard deviations are fake values, experiment and determine
@@ -417,8 +384,8 @@ public class Vision
      * @param singleTagStdDevs      Single AprilTag standard deviations of estimated poses from the camera.
      * @param multiTagStdDevsMatrix Multi AprilTag standard deviations of estimated poses from the camera.
      */
-    Cameras(String name, Rotation3d robotToCamRotation, Translation3d robotToCamTranslation,
-            Matrix<N3, N1> singleTagStdDevs, Matrix<N3, N1> multiTagStdDevsMatrix)
+      Cameras(String name, Rotation3d robotToCamRotation, Translation3d robotToCamTranslation,
+        Matrix<N3, N1> singleTagStdDevs, Matrix<N3, N1> multiTagStdDevsMatrix)
     {
       latencyAlert = new Alert("'" + name + "' Camera is experiencing high latency.", AlertType.kWarning);
 
@@ -427,10 +394,8 @@ public class Vision
       // https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html
       robotToCamTransform = new Transform3d(robotToCamTranslation, robotToCamRotation);
 
-      poseEstimator = new PhotonPoseEstimator(Vision.fieldLayout,
-                                              PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
-                                              robotToCamTransform);
-      poseEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
+  // Create the estimator via the suppressed factory method so deprecated calls are isolated
+  poseEstimator = createPoseEstimator(robotToCamTransform);
 
       this.singleTagStdDevs = singleTagStdDevs;
       this.multiTagStdDevs = multiTagStdDevsMatrix;
@@ -549,12 +514,19 @@ public class Vision
      * @return An {@link EstimatedRobotPose} with an estimated pose, estimate timestamp, and targets used for
      * estimation.
      */
-    private void updateEstimatedGlobalPose()
+  private void updateEstimatedGlobalPose()
     {
       Optional<EstimatedRobotPose> visionEst = Optional.empty();
       for (var change : resultsList)
       {
-        visionEst = poseEstimator.update(change);
+        // New API provides several estimation helpers. Prefer running the coprocessor
+        // multi-tag estimation (runs on the coprocessor) and fall back to lowest
+        // ambiguity estimation if coprocessor output is not available.
+        Optional<EstimatedRobotPose> est = poseEstimator.estimateCoprocMultiTagPose(change);
+        if (est.isEmpty()) {
+          est = poseEstimator.estimateLowestAmbiguityPose(change);
+        }
+        visionEst = est;
         updateEstimationStdDevs(visionEst, change.getTargets());
       }
       estimatedRobotPose = visionEst;

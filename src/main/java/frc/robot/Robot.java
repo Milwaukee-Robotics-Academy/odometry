@@ -109,7 +109,8 @@ public class Robot extends TimedRobot
     // schedule the autonomous command selected in the autoChooser
     if (m_autonomousCommand != null)
     {
-      m_autonomousCommand.schedule();
+      // Use the CommandScheduler to schedule commands (replaces deprecated Command.schedule())
+      edu.wpi.first.wpilibj2.command.CommandScheduler.getInstance().schedule(m_autonomousCommand);
     }
   }
 
