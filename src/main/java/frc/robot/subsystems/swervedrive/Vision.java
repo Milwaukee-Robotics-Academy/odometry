@@ -53,10 +53,7 @@ public class Vision {
    */
   public static final AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(
       AprilTagFields.k2026RebuiltAndymark);
-  /**
-   * Photon Vision Simulation
-   */
-  public VisionSystemSim visionSim;
+
   /**
    * Current pose from the pose estimator using wheel odometry.
    */
@@ -78,17 +75,7 @@ public class Vision {
     this.field2d = field;
 
     SmartDashboard.putBoolean("Odometry/Vision-Enable", false);
-    if (Robot.isSimulation()) {
-      visionSim = new VisionSystemSim("Vision");
-      visionSim.addAprilTags(fieldLayout);
-
-      for (Cameras c : Cameras.values()) {
-        c.addToVisionSim(visionSim);
-      }
-
-      openSimCameraViews();
-    }
-  }
+     }
 
   /**
    * Calculates a target pose relative to an AprilTag on the field.
@@ -117,17 +104,7 @@ public class Vision {
    */
   public void updatePoseEstimation(SwerveDrive swerveDrive) {
     if (SwerveDriveTelemetry.isSimulation && swerveDrive.getSimulationDriveTrainPose().isPresent()) {
-      /*
-       * In the maple-sim, odometry is simulated using encoder values, accounting for
-       * factors like skidding and drifting.
-       * As a result, the odometry may not always be 100% accurate.
-       * However, the vision system should be able to provide a reasonably accurate
-       * pose estimation, even when odometry is incorrect.
-       * (This is why teams implement vision system to correct odometry.)
-       * Therefore, we must ensure that the actual robot pose is provided in the
-       * simulator when updating the vision simulation during the simulation.
-       */
-      visionSim.update(swerveDrive.getSimulationDriveTrainPose().get());
+
     }
     for (Cameras camera : Cameras.values()) {
       camera.poseEstimator.addHeadingData(Timer.getFPGATimestamp(), swerveDrive.getPose().getRotation());
@@ -159,17 +136,7 @@ public class Vision {
    */
   public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Cameras camera) {
     Optional<EstimatedRobotPose> poseEst = camera.getEstimatedGlobalPose();
-    if (Robot.isSimulation()) {
-      Field2d debugField = visionSim.getDebugField();
-      // Uncomment to enable outputting of vision targets in sim.
-      poseEst.ifPresentOrElse(
-          est -> debugField
-              .getObject("VisionEstimation")
-              .setPose(est.estimatedPose.toPose2d()),
-          () -> {
-            debugField.getObject("VisionEstimation").setPoses();
-          });
-    }
+
     return poseEst;
   }
 
@@ -217,32 +184,6 @@ public class Vision {
 
   }
 
-  /**
-   * Vision simulation.
-   *
-   * @return Vision Simulation
-   */
-  public VisionSystemSim getVisionSim() {
-    return visionSim;
-  }
-
-  /**
-   * Open up the photon vision camera streams on the localhost, assumes running
-   * photon vision on localhost.
-   */
-  private void openSimCameraViews() {
-    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-      // try
-      // {
-      // Desktop.getDesktop().browse(new URI("http://localhost:1182/"));
-      // Desktop.getDesktop().browse(new URI("http://localhost:1184/"));
-      // Desktop.getDesktop().browse(new URI("http://localhost:1186/"));
-      // } catch (IOException | URISyntaxException e)
-      // {
-      // e.printStackTrace();
-      // }
-    }
-  }
 
   /**
    * Update the {@link Field2d} to include tracked targets/
@@ -282,7 +223,7 @@ public class Vision {
         new Translation3d(Units.inchesToMeters(10),
             Units.inchesToMeters(-7.5),
             Units.inchesToMeters(8)),
-        VecBuilder.fill(4, 4, 8), VecBuilder.fill(0.5, 0.5, .8));
+        VecBuilder.fill(4, 4, 8), VecBuilder.fill(0.5, 0.5, 8));
 
     /**
      * Latency alert to use when high latency is detected.
